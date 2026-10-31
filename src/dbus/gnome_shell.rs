@@ -4,6 +4,7 @@ use std::sync::{Arc, PoisonError, RwLock};
 
 use niri_config::{Action, Bind, BoundAction, Key};
 use serde::Deserialize;
+use smithay::backend::input::InputTime;
 use smithay::wayland::xdg_activation::XdgActivationState;
 use zbus::blocking::object_server::InterfaceRef;
 use zbus::fdo::{self};
@@ -255,7 +256,12 @@ impl Shell {
     }
 
     /// Activates the given `action`, with the given `time` being the time the action was pressed.
-    pub fn activate_action(&self, action: ActionId, activation_state: &mut XdgActivationState) {
+    pub fn activate_action(
+        &self,
+        action: ActionId,
+        input_time: InputTime,
+        activation_state: &mut XdgActivationState,
+    ) {
         let iface = self.iface.read().unwrap();
         // Unwrap is safe since we drop the shell before activating any actions if the iface fails
         // to populate.
@@ -268,12 +274,7 @@ impl Shell {
                 iface.signal_emitter(),
                 action,
                 ActivationParameters {
-                    // FIXME: This timestamp doesn't **seem** to do anything, but it's probably not
-                    // great that we're giving it a dummy value. However, getting the input time
-                    // from anything that can trigger a bind is non-trivial (e.g., key-repeat
-                    // timers). Ideally we'd get the InputTime for whatever event caused us to
-                    // activate this action.
-                    timestamp: 0,
+                    timestamp: input_time.millis(),
                     action_mode: 1,
                     activation_token: activation_token.to_string(),
                 },
@@ -286,7 +287,12 @@ impl Shell {
     }
 
     /// Activates the given `action`, with the given `time` being the time the action was pressed.
-    pub fn deactivate_action(&self, action: ActionId, activation_state: &mut XdgActivationState) {
+    pub fn deactivate_action(
+        &self,
+        action: ActionId,
+        input_time: InputTime,
+        activation_state: &mut XdgActivationState,
+    ) {
         let iface = self.iface.read().unwrap();
         // Unwrap is safe since we drop the shell before activating any actions if the iface fails
         // to populate.
@@ -299,12 +305,7 @@ impl Shell {
                 iface.signal_emitter(),
                 action,
                 ActivationParameters {
-                    // FIXME: This timestamp doesn't **seem** to do anything, but it's probably not
-                    // great that we're giving it a dummy value. However, getting the input time
-                    // from anything that can trigger a bind is non-trivial (e.g., key-repeat
-                    // timers). Ideally we'd get the InputTime for whatever event caused us to
-                    // deactivate this action.
-                    timestamp: 0,
+                    timestamp: input_time.millis(),
                     action_mode: 1,
                     activation_token: activation_token.to_string(),
                 },
